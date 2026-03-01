@@ -1,5 +1,5 @@
 # Stage 1: Build using Gradle with JDK 21
-FROM gradle:8.5-jdk21 AS builder
+FROM gradle:8.14-jdk21 AS builder
 WORKDIR /app
 # Copy build files
 COPY build.gradle settings.gradle ./
