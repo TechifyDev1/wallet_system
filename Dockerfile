@@ -5,7 +5,7 @@ WORKDIR /app
 COPY build.gradle settings.gradle ./
 COPY src ./src
 # Build the JAR
-RUN gradle bootJar --no-daemon -x test
+RUN gradle bootJar --no-daemon -x test --info -Dorg.gradle.jvmargs="-Xmx512m -XX:MaxMetaspaceSize=256m"
 
 # Stage 2: Runtime with JRE 21
 FROM eclipse-temurin:21-jre-jammy
