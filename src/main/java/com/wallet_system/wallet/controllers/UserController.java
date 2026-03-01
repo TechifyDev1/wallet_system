@@ -55,4 +55,10 @@ public class UserController {
 
         return ResponseEntity.ok(userService.changePhoneNumber(request));
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<RecentContactResponse>> searchUsers(
+            @org.springframework.web.bind.annotation.RequestParam String query) {
+        return ResponseEntity.ok(userService.searchUsers(query));
+    }
 }

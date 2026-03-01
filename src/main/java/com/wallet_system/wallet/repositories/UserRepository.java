@@ -1,8 +1,10 @@
 package com.wallet_system.wallet.repositories;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.wallet_system.wallet.entities.UserEntity;
@@ -19,4 +21,7 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
 
     boolean existsByPhoneNumber(
             String phoneNumber);
+
+    List<UserEntity> findByUserNameContainingIgnoreCaseOrFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
+            String userName, String firstName, String lastName, Pageable pageable);
 }

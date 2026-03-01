@@ -1,5 +1,11 @@
 package com.wallet_system.wallet.services;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +17,7 @@ import com.wallet_system.wallet.models.request.ChangePhoneNumberRequest;
 import com.wallet_system.wallet.models.response.AuthenticatedUserResponse;
 import com.wallet_system.wallet.models.response.ChangeEmailResponse;
 import com.wallet_system.wallet.models.response.ChangePhoneNumberResponse;
+import com.wallet_system.wallet.models.response.RecentContactResponse;
 import com.wallet_system.wallet.models.response.SecurityProfile;
 import com.wallet_system.wallet.models.response.UserProfile;
 import com.wallet_system.wallet.models.response.WalletSummary;
@@ -99,6 +106,23 @@ public class UserService {
                                 user.getPhoneNumber(),
                                 user.getUpdatedAt(),
                                 "Phone number updated successfully.");
+        }
+
+        @Transactional
+        public List<RecentContactResponse> searchUsers(String query) {
+                UserEntity currentUser = authService.getAuthenticatedUser();
+                List<UserEntity> users = userRepository
+                                .findByUserNameContainingIgnoreCaseOrFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
+                                                query, query, query, PageRequest.of(0, 10));
+
+                return users.stream()
+                                .filter(user -> !user.getId().equals(currentUser.getId()))
+                                .map(user -> new RecentContactResponse(
+                                                user.getUserName(),
+                                                LocalDateTime.now(), // Placeholder for search
+                                                BigDecimal.ZERO, // Placeholder for search
+                                                user.getProfilePicUrl()))
+                                .collect(Collectors.toList());
         }
 
 }
