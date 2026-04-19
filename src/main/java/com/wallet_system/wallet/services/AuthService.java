@@ -12,9 +12,11 @@ import com.wallet_system.wallet.exceptions.ResourceNotFoundException;
 import com.wallet_system.wallet.exceptions.UnauthorizedException;
 import com.wallet_system.wallet.exceptions.UserAlreadyExistsException;
 import com.wallet_system.wallet.models.request.CreatePinRequest;
+import com.wallet_system.wallet.models.request.ForgotPasswordRequest;
 import com.wallet_system.wallet.models.request.RegisterRequest;
 import com.wallet_system.wallet.models.response.CreatePinResponse;
 import com.wallet_system.wallet.models.response.CreateWalletResponse;
+import com.wallet_system.wallet.models.response.ForgotPasswordResponse;
 import com.wallet_system.wallet.models.response.RegisterResponse;
 import com.wallet_system.wallet.models.response.RegisterWithWalletResponse;
 import com.wallet_system.wallet.repositories.UserRepository;
@@ -47,6 +49,7 @@ public class AuthService {
         user.setEmail(request.email());
         user.setRole(Role.USER);
         user.setUserName(request.userName());
+        user.setSecretKey(request.secretKey());
         userRepository.save(user);
 
         RegisterResponse userRes = new RegisterResponse(user.getFirstName(), user.getLastName(), user.getUserName());
@@ -72,4 +75,18 @@ public class AuthService {
         String email = authentication.getName();
         return userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("No Logged in user"));
     }
+
+    public ForgotPasswordResponse forgotPassword(ForgotPasswordRequest request) {
+        UserEntity user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new ResourceNotFoundException("User with email " + request.email() + " not found"));
+
+        if (!user.getSecretKey().equals(request.secretKey())) {
+            throw new UnauthorizedException("Invalid secret key");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+        return new ForgotPasswordResponse("Password reset successfully", user.getEmail());
+    }
+
 }

@@ -85,6 +85,17 @@ public class UserEntity implements UserDetails {
 
     private String profilePicUrl;
 
+    @Column(nullable = false)
+    private String secretKey;
+
+    public String getSecretKey() {
+        return secretKey;
+    }
+
+    public void setSecretKey(String secretKey) {
+        this.secretKey = secretKey;
+    }
+
     public String getProfilePicUrl() {
         return profilePicUrl;
     }

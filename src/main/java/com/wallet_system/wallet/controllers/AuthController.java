@@ -16,9 +16,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.wallet_system.wallet.models.request.CreatePinRequest;
+import com.wallet_system.wallet.models.request.ForgotPasswordRequest;
 import com.wallet_system.wallet.models.request.LoginRequest;
 import com.wallet_system.wallet.models.request.RegisterRequest;
 import com.wallet_system.wallet.models.response.CreatePinResponse;
+import com.wallet_system.wallet.models.response.ForgotPasswordResponse;
 import com.wallet_system.wallet.models.response.LoginResponse;
 import com.wallet_system.wallet.models.response.RegisterWithWalletResponse;
 import com.wallet_system.wallet.services.AuthService;
@@ -78,6 +80,12 @@ public class AuthController {
     @PostMapping("/set-pin")
     public ResponseEntity<CreatePinResponse> setPin(@RequestBody @Valid CreatePinRequest request) {
         var response = authService.createPin(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ForgotPasswordResponse> forgotPassword(@RequestBody @Valid ForgotPasswordRequest request) {
+        var response = authService.forgotPassword(request);
         return ResponseEntity.ok(response);
     }
 }

@@ -11,6 +11,10 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -44,10 +48,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({
-            org.springframework.http.converter.HttpMessageNotReadableException.class,
-            org.springframework.web.HttpMediaTypeNotSupportedException.class,
-            org.springframework.web.HttpRequestMethodNotSupportedException.class,
-            org.springframework.web.bind.MissingServletRequestParameterException.class
+            HttpMessageNotReadableException.class,
+            HttpMediaTypeNotSupportedException.class,
+            HttpRequestMethodNotSupportedException.class,
+            MissingServletRequestParameterException.class
     })
     public ProblemDetail handleBadRequestExceptions(Exception ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
@@ -127,8 +131,7 @@ public class GlobalExceptionHandler {
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.CONFLICT,
-                specificDetail 
-        );
+                specificDetail);
 
         problemDetail.setTitle("Duplicate Information");
         problemDetail.setProperty("timestamp", Instant.now());

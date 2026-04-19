@@ -8,5 +8,6 @@ public record RegisterRequest(@NotBlank(message = "First name is required") Stri
         @NotBlank(message = "Email is required") @Email(message = "Please provide a valid email address") String email,
         @NotBlank(message = "Username is required") String userName,
         @NotBlank(message = "Phone number is required") String phoneNumber,
-        @NotBlank(message = "Password is required") String password) {
+        @NotBlank(message = "Password is required") String password, 
+        @NotBlank(message= "Secrete key is required") String secretKey) {
 }

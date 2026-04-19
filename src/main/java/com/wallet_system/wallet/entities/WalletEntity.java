@@ -54,7 +54,7 @@ public class WalletEntity {
     private LocalDateTime updatedAt;
 
     @Version
-    private Long version;
+    private Long version = 1L;
 
     public Long getVersion() {
         return version;
