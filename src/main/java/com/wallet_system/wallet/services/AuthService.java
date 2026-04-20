@@ -14,11 +14,13 @@ import com.wallet_system.wallet.exceptions.UserAlreadyExistsException;
 import com.wallet_system.wallet.models.request.CreatePinRequest;
 import com.wallet_system.wallet.models.request.ForgotPasswordRequest;
 import com.wallet_system.wallet.models.request.RegisterRequest;
+import com.wallet_system.wallet.models.request.ResetPasswordRequest;
 import com.wallet_system.wallet.models.response.CreatePinResponse;
 import com.wallet_system.wallet.models.response.CreateWalletResponse;
 import com.wallet_system.wallet.models.response.ForgotPasswordResponse;
 import com.wallet_system.wallet.models.response.RegisterResponse;
 import com.wallet_system.wallet.models.response.RegisterWithWalletResponse;
+import com.wallet_system.wallet.models.response.ResetPasswordResponse;
 import com.wallet_system.wallet.repositories.UserRepository;
 
 @Service
@@ -87,6 +89,18 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
         return new ForgotPasswordResponse("Password reset successfully", user.getEmail());
+    }
+
+    public ResetPasswordResponse resetPassword(ResetPasswordRequest request) {
+        UserEntity user = getAuthenticatedUser();
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new UnauthorizedException("Current password is incorrect");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+        return new ResetPasswordResponse("Password reset successfully");
     }
 
 }

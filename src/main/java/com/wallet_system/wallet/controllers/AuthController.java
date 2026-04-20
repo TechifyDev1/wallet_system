@@ -9,6 +9,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -19,11 +20,16 @@ import com.wallet_system.wallet.models.request.CreatePinRequest;
 import com.wallet_system.wallet.models.request.ForgotPasswordRequest;
 import com.wallet_system.wallet.models.request.LoginRequest;
 import com.wallet_system.wallet.models.request.RegisterRequest;
+import com.wallet_system.wallet.models.request.ResetPasswordRequest;
+import com.wallet_system.wallet.models.request.TokenRefreshRequest;
 import com.wallet_system.wallet.models.response.CreatePinResponse;
 import com.wallet_system.wallet.models.response.ForgotPasswordResponse;
 import com.wallet_system.wallet.models.response.LoginResponse;
 import com.wallet_system.wallet.models.response.RegisterWithWalletResponse;
+import com.wallet_system.wallet.models.response.ResetPasswordResponse;
+import com.wallet_system.wallet.models.response.TokenRequestResponse;
 import com.wallet_system.wallet.services.AuthService;
+import com.wallet_system.wallet.services.RefreshTokenService;
 import com.wallet_system.wallet.services.TokenService;
 
 import jakarta.validation.Valid;
@@ -35,12 +41,14 @@ public class AuthController {
     private final AuthService authService;
     private final AuthenticationManager authenticationManager;
     private final TokenService tokenService;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthController(AuthService authService, AuthenticationManager authenticationManager,
-            TokenService tokenService) {
+            TokenService tokenService, RefreshTokenService refreshTokenService) {
         this.authService = authService;
         this.authenticationManager = authenticationManager;
         this.tokenService = tokenService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @PostMapping("/register")
@@ -60,8 +68,13 @@ public class AuthController {
         String token = tokenService.generateToken(authentication);
 
         if ("app".equalsIgnoreCase(clientType)) {
+            var refreshTokenEntity = refreshTokenService.createToken(authentication);
+            var refreshTokenResponse = new com.wallet_system.wallet.models.response.RefreshTokenResponse(
+                refreshTokenEntity.getToken(), 
+                refreshTokenEntity.getExpiresAt()
+            );
             return ResponseEntity.ok(
-                    new LoginResponse("Login successful", token));
+                    new LoginResponse("Login successful", token, refreshTokenResponse));
         }
 
         ResponseCookie cookie = ResponseCookie.from("auth-token", token)
@@ -73,8 +86,8 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(new LoginResponse("Login successful", null));
+                .header(HttpHeaders.SET_COOKIE, cookie.toString(), HttpHeaders.SET_COOKIE, "refresh-token=" + refreshTokenService.createToken(authentication).getToken() + "; HttpOnly; Path=/; Max-Age=" + 7 * 24 * 60 * 60 + "; SameSite=Strict")
+                .body(new LoginResponse("Login successful", null, null));
     }
 
     @PostMapping("/set-pin")
@@ -87,5 +100,23 @@ public class AuthController {
     public ResponseEntity<ForgotPasswordResponse> forgotPassword(@RequestBody @Valid ForgotPasswordRequest request) {
         var response = authService.forgotPassword(request);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ResetPasswordResponse> resetPassword(@RequestBody @Valid ResetPasswordRequest request) {
+        var response = authService.resetPassword(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/refresh")
+    public ResponseEntity<TokenRequestResponse> refreshToken(@RequestBody @Valid TokenRefreshRequest request) {
+        TokenRequestResponse newToken = refreshTokenService.newToken(request.refreshToken());
+        return ResponseEntity.ok(newToken);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout() {
+        refreshTokenService.deleteToken();
+        return ResponseEntity.ok("Logged out successfully");
     }
 }
