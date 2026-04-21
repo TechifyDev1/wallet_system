@@ -1,45 +1,145 @@
 # Wallet System
 
-A Spring Boot backend for the wallet platform. This service powers the companion Flutter mobile app in `wallet_mobile` and handles authentication, wallet creation, wallet funding, transfers, transaction history, and user account management.
-
-## Overview
-
-`wallet_system` is a Java 21 backend built with Spring Boot, Spring Security, Spring Data JPA, and MySQL. It exposes REST endpoints consumed by the mobile app and uses JWT-based authentication for protected routes, with refresh-token support for app clients.
+A Spring Boot backend for the wallet platform. This service powers the companion Flutter app in `wallet_mobile` and handles authentication, wallet creation, funding, transfers, transaction history, and account-related profile updates.
 
 ## Full-Stack Context
 
-This backend works together with the Flutter mobile client repository:
+This backend works together with the Flutter mobile client:
 
 [wallet_mobile](https://github.com/TechifyDev1/wallet_mobile)
 
-Across both projects, I implemented:
+Across both repositories, the platform provides:
 
-- Mobile wallet flows in Flutter with Riverpod and Cupertino UI
-- REST API endpoints in Spring Boot
-- Authentication, refresh-token handling, and protected resource access
-- User registration with automatic wallet creation
-- Wallet funding, transfers, ledger entries, and transaction history
-- Profile retrieval, user search, recent contacts, and account updates
+- Mobile wallet flows in Flutter
+- REST APIs in Spring Boot
+- JWT-secured authenticated routes
+- Refresh-token support for app clients
+- Automatic wallet creation during onboarding
+- Wallet funding, transfers, ledger tracking, and transaction history
+- Profile retrieval and account update operations
 
 ## What The Backend Does
 
-- Register users and create a wallet for each new account
+- Register new users
+- Create a wallet during registration
 - Authenticate users with email and password
 - Issue JWT access tokens
-- Issue refresh tokens for app clients
+- Issue refresh tokens for mobile clients
 - Allow first-time transaction PIN creation
-- Reset forgotten passwords with email and secret key
-- Reset passwords for authenticated users
-- Return the authenticated user's profile, wallet summary, and security info
+- Support forgot-password recovery with email and secret key
+- Support password reset for authenticated users
+- Return authenticated user profile, wallet summary, and security info
 - Change email and phone number after password verification
 - Search users for transfer recipients
 - Return recent transfer contacts
-- Fund a wallet with idempotency protection
-- Transfer money between users with PIN verification
-- Record ledger entries for debit and credit sides of transfers
+- Fund wallets
+- Transfer money between users
 - Return paginated transaction history
-- Check an idempotency key for an existing transaction
-- Delete refresh tokens on logout
+- Check transactions by idempotency key
+- Delete refresh tokens during logout
+
+## Backend Responsibilities For The Mobile App
+
+The Flutter app handles session storage and user interactions, while this backend is responsible for enforcing the rules that protect account access and money movement.
+
+### Authentication And Access Control
+
+- `Spring Security`
+  Protects non-public routes and keeps wallet/profile endpoints behind authentication.
+- `JWT access tokens`
+  Used by the mobile app for authenticated requests.
+- `Refresh tokens`
+  Issued for app clients so short-lived access tokens can be renewed without repeated login.
+- `Password hashing`
+  Passwords and transaction PINs are verified through `PasswordEncoder` instead of plain-text comparison.
+
+### Transaction Integrity
+
+- `@Transactional service methods`
+  Funding and transfer flows run inside database transactions.
+- `Pessimistic wallet locking`
+  Wallet lookup uses pessimistic write locking to reduce concurrent balance-update conflicts.
+- `Idempotency protection`
+  Funding and transfer requests use idempotency keys to prevent duplicate processing on retries.
+- `Ledger recording`
+  Transfer activity creates debit and credit ledger entries for a clearer transaction trail.
+
+### Account Protection
+
+- `Password re-verification`
+  Sensitive profile changes require the current password.
+- `First-time transaction PIN setup`
+  Transfer security includes a dedicated PIN created after onboarding.
+- `Forgot-password recovery with secret key`
+  Recovery requires both email and the stored recovery secret.
+
+## Main Modules
+
+- `config/`
+  Security, environment, and application configuration.
+- `controllers/`
+  Auth, user, and transaction endpoints.
+- `services/`
+  Business logic for auth, tokens, wallets, users, funding, and transfers.
+- `entities/`
+  JPA models for users, wallets, transactions, ledgers, and refresh tokens.
+- `repositories/`
+  Data access with Spring Data JPA.
+- `models/request` and `models/response`
+  Contracts used by the mobile app.
+
+## Implemented API Routes
+
+### Auth
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/set-pin`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/reset-password`
+- `GET /api/auth/refresh`
+- `POST /api/auth/logout`
+
+### User
+
+- `GET /api/user/me`
+- `GET /api/user/me/recent-contact`
+- `POST /api/user/email/change`
+- `POST /api/user/phone/change`
+- `GET /api/user/search?query=...`
+
+### Transactions
+
+- `POST /api/fund`
+- `POST /api/transfer`
+- `GET /api/transactions?page=0&size=10`
+- `GET /api/check/{idempotencyKey}`
+
+## Wallet And Transaction Behavior
+
+- Registration creates both the user and the wallet.
+- Wallets start with `NGN` currency and zero balance.
+- Funding uses an idempotency key so repeated requests do not create duplicate deposits.
+- Transfers require a valid transaction PIN.
+- Transfer processing records both sender and receiver ledger entries.
+- Transaction history is returned from ledger records in descending order.
+
+## Important Files
+
+- `src/main/java/com/wallet_system/wallet/config/SecurityConfig.java`
+  Stateless security setup, route protection, JWT encoder/decoder, and password encoder configuration.
+- `src/main/java/com/wallet_system/wallet/controllers/AuthController.java`
+  Registration, login, PIN setup, refresh, forgot-password, reset-password, and logout endpoints.
+- `src/main/java/com/wallet_system/wallet/controllers/UserController.java`
+  Authenticated profile, recent contacts, user search, and sensitive profile update endpoints.
+- `src/main/java/com/wallet_system/wallet/controllers/TransactionsController.java`
+  Funding, transfer, idempotency check, and transaction history endpoints.
+- `src/main/java/com/wallet_system/wallet/services/TransactionService.java`
+  Funding and transfer business rules, ledger writes, and transaction retrieval.
+- `src/main/java/com/wallet_system/wallet/repositories/WalletRepository.java`
+  Pessimistic locking support for balance-changing operations.
+- `src/main/java/com/wallet_system/wallet/entities/TransactionEntity.java`
+  Transaction persistence including unique idempotency key support.
 
 ## Tech Stack
 
@@ -72,80 +172,30 @@ src/
       services/
     resources/
       application.properties
-      .env
   test/
     java/com/wallet_system/wallet/
 ```
 
-## Main Modules
-
-- `controllers/`
-  Exposes authentication, user, and transaction endpoints.
-- `services/`
-  Contains the business logic for auth, tokens, wallet creation, profile operations, funding, and transfers.
-- `entities/`
-  Maps users, wallets, transactions, ledgers, and refresh tokens to the database.
-- `repositories/`
-  Handles persistence through Spring Data JPA.
-- `models/request` and `models/response`
-  Define the API contracts used by the mobile app.
-
-## Implemented API Routes
-
-### Auth
-
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/set-pin`
-- `POST /api/auth/forgot-password`
-- `POST /api/auth/reset-password`
-- `GET /api/auth/refresh`
-- `POST /api/auth/logout`
-
-### User
-
-- `GET /api/user/me`
-- `GET /api/user/me/recent-contact`
-- `POST /api/user/email/change`
-- `POST /api/user/phone/change`
-- `GET /api/user/search?query=...`
-
-### Transactions
-
-- `POST /api/fund`
-- `POST /api/transfer`
-- `GET /api/transactions?page=0&size=10`
-- `GET /api/check/{idempotencyKey}`
-
 ## Authentication Flow
 
 1. A user logs in with email and password.
-2. The backend authenticates with Spring Security.
-3. An access token is generated.
-4. If the request includes `X-Client-Type: app`, the backend also creates a refresh token payload for the mobile app.
+2. Spring Security authenticates the request.
+3. The backend issues an access token.
+4. App clients also receive a refresh token.
 5. Protected routes require a valid bearer token.
-6. The mobile app uses the refresh token flow when access tokens expire.
-
-## Wallet And Transaction Behavior
-
-- New users receive a wallet during registration.
-- New wallets are created with `NGN` currency and a zero balance.
-- Funding uses an idempotency key to avoid duplicate deposits.
-- Transfers require a valid transaction PIN.
-- Transfers create both debit and credit ledger entries.
-- Transaction history is derived from ledger records and returned in descending order.
+6. The mobile app uses the refresh flow when the access token expires.
 
 ## Configuration
 
-The app reads database settings from `src/main/resources/.env` through `application.properties`.
+Database settings are loaded from environment variables through `application.properties`.
 
-Required environment keys:
+Required keys:
 
 - `DB_URL`
 - `DB_USERNAME`
 - `DB_PASSWORD`
 
-`application.properties` currently expects:
+Current datasource configuration:
 
 ```properties
 spring.datasource.url=${DB_URL}
@@ -159,10 +209,10 @@ spring.jpa.hibernate.ddl-auto=update
 ### Prerequisites
 
 - Java 21
-- A MySQL server
+- MySQL
 - Gradle wrapper support enabled in your environment
 
-### Configure The Database
+### Configure Environment
 
 Create or update `src/main/resources/.env` with your local database values:
 
@@ -184,11 +234,9 @@ The mobile app currently points to:
 http://192.168.0.164:8080/api
 ```
 
-If your backend runs on a different host or port, update the mobile app base URL in `wallet_mobile/lib/src/core/network/api_endpoints.dart`.
+If your backend runs on another host or port, update the base URL in `wallet_mobile/lib/src/core/network/api_endpoints.dart`.
 
 ## Testing
-
-This project currently includes a basic Spring context-load test.
 
 ```bash
 ./gradlew test
@@ -196,6 +244,6 @@ This project currently includes a basic Spring context-load test.
 
 ## Notes
 
-- Protected routes are configured in `SecurityConfig` using stateless JWT authentication.
-- The backend is set up for app clients and also contains cookie-based login handling for non-app clients.
-- Error responses are centralized through a global exception handler.
+- Error responses are centralized in the global exception handler.
+- The backend supports mobile app clients and also contains cookie-oriented login handling for non-app clients.
+- Security and transaction guarantees described in the mobile README are enforced here on the server side.
